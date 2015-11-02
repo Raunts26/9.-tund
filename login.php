@@ -1,13 +1,11 @@
 <?php
     require_once("functions.php");
-	
-	//Kui kasutaja on sisse logitud, suuna teisele lehele
-	//Kontrollin kas sessiooni muutuja on olemas
-	
-	if(isset($_SESSION['logged_in_user_id'])) {
-	header("Location: data.php");
-	}
-	
+    
+    //kui kasutaja on sisse logitud, suuna teisele lehele
+    //kontrollin kas sessiooni muutuja olemas
+    if(isset($_SESSION['user_id'])){
+        header("Location: data.php");
+    }
   // muuutujad errorite jaoks
 	$email_error = "";
 	$password_error = "";
@@ -36,11 +34,24 @@
 			}
       // Kui oleme siia jõudnud, võime kasutaja sisse logida
 			if($password_error == "" && $email_error == ""){
-				echo "Võib sisse logida! Kasutajanimi on ".$email;
+				//echo "Võib sisse logida! Kasutajanimi on ".$email." ja parool on ".$password;
 			
                 $hash = hash("sha512", $password);
                 
-                loginUser($email, $hash);
+                $login_response = $User->loginUser($email, $hash);
+                
+                //var_dump($login_response);
+                //echo $login_response->success->user->email;
+                
+                if(isset($login_response->success)){
+                    // sisselogimine õnnestus
+                    $_SESSION["user_id"] = $login_response->success->user->id;
+                    $_SESSION["user_email"] = $login_response->success->user->email;
+                    
+					 $_SESSION["login_message"] = $login_response->success->message;
+					
+                    header("Location: data.php");
+                }
             
             }
 		} // login if end
@@ -63,14 +74,16 @@
 				}
 			}
 			if(	$create_email_error == "" && $create_password_error == ""){
-				echo hash("sha512", $create_password);
-                echo "Võib kasutajat luua! Kasutajanimi on ".$create_email;
+				//echo hash("sha512", $create_password);
+                //echo "Võib kasutajat luua! Kasutajanimi on ".$create_email." ja parool on ".$create_password;
                 
                 // tekitan parooliräsi
                 $hash = hash("sha512", $create_password);
                 
                 //functions.php's funktsioon
-                createUser($create_email, $hash);
+                $response = $User->createUser($create_email, $hash);
+                
+                
                 
                 
             }
@@ -93,6 +106,15 @@
 <body>
 
   <h2>Log in</h2>
+  
+  <?php if(isset($login_response->error)): ?>
+  
+  <p style="color:red;">
+    <?=$login_response->error->message;?>
+  </p>
+   
+  <?php endif; ?>
+  
   <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]);?>" method="post" >
   	<input name="email" type="email" placeholder="E-post" value="<?php echo $email; ?>"> <?php echo $email_error; ?><br><br>
   	<input name="password" type="password" placeholder="Parool" value="<?php echo $password; ?>"> <?php echo $password_error; ?><br><br>
@@ -100,6 +122,22 @@
   </form>
 
   <h2>Create user</h2>
+  
+  <?php if(isset($response->success)): ?>
+  
+  <p style="color:green;">
+    <?=$response->success->message;?>
+  </p>
+  
+  <?php elseif(isset($response->error)): ?>
+  
+  <p style="color:red;">
+    <?=$response->error->message;?>
+  </p>
+   
+  <?php endif; ?>
+  
+  
   <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]);?>" method="post" >
   	<input name="create_email" type="email" placeholder="E-post" value="<?php echo $create_email; ?>"> <?php echo $create_email_error; ?><br><br>
   	<input name="create_password" type="password" placeholder="Parool"> <?php echo $create_password_error; ?> <br><br>
